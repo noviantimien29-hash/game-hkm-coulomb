@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Game Hukum Coulomb</title>
+  <style>
+    :root{
+      --bg:#020617; --panel:rgba(30,41,59,.82); --panel2:rgba(59,76,133,.78);
+      --line:rgba(148,163,184,.35); --text:#f8fafc; --muted:#cbd5e1;
+      --blue:#2563eb; --pink:#db3feb; --red:#ef4444; --green:#22c55e;
+      --yellow:#facc15; --orange:#f97316; --shadow:0 22px 60px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box;margin:0;padding:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif}
+    body{min-height:100vh;background:var(--bg);color:var(--text);overflow-x:hidden}
+    #starCanvas{position:fixed;inset:0;width:100%;height:100%;z-index:-3;background:radial-gradient(circle at top,#172554 0%,#020617 48%,#000 100%)}
+    .nebula{position:fixed;inset:-20%;z-index:-2;background:radial-gradient(circle at 15% 20%,rgba(147,51,234,.35),transparent 28%),radial-gradient(circle at 85% 10%,rgba(37,99,235,.25),transparent 26%),radial-gradient(circle at 50% 85%,rgba(236,72,153,.18),transparent 25%);filter:blur(10px);animation:floatNebula 14s ease-in-out infinite alternate}
+    @keyframes floatNebula{from{transform:translate3d(-1%,0,0) scale(1)}to{transform:translate3d(2%,1%,0) scale(1.05)}}
+    .screen{min-height:100vh;padding:18px 22px 24px;display:none}.screen.active{display:block}
+    .start-wrap{min-height:100vh;display:grid;place-items:center;padding:24px}.start-card{width:min(560px,94vw);background:linear-gradient(145deg,rgba(37,99,235,.35),rgba(126,34,206,.42));border:1px solid rgba(255,255,255,.14);border-radius:28px;box-shadow:var(--shadow);padding:30px;text-align:center;backdrop-filter:blur(14px)}
+    .brand{font-size:clamp(28px,5vw,46px);font-weight:900;letter-spacing:.2px;margin-bottom:8px}.subtitle{color:var(--muted);line-height:1.55;margin-bottom:22px}.form-grid{display:grid;gap:14px;margin:20px 0}.field{text-align:left}.field label{display:block;font-size:13px;font-weight:800;margin:0 0 6px;color:#dbeafe}.field input{width:100%;border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:14px 16px;font-size:16px;background:rgba(15,23,42,.85);color:#fff;outline:none}.field input:focus{border-color:#60a5fa;box-shadow:0 0 0 4px rgba(96,165,250,.15)}
+    button{border:none;border-radius:14px;padding:12px 16px;font-weight:900;color:#fff;background:#2563eb;cursor:pointer;transition:.15s transform,.15s filter;box-shadow:0 10px 22px rgba(0,0,0,.25)}button:hover{filter:brightness(1.08);transform:translateY(-1px)}button:active{transform:translateY(1px)}.btn-pink{background:linear-gradient(135deg,#ec4899,#7c3aed)}.btn-red{background:#dc2626}.btn-green{background:#16a34a}.btn-orange{background:#f97316}.btn-ghost{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.14)}.btn-small{padding:9px 12px;border-radius:12px;font-size:12px}
+    .top{text-align:center;margin-bottom:18px}.top h1{font-size:clamp(22px,4vw,36px);font-weight:950}.top p{color:#dbeafe;margin-top:6px;font-size:14px}.hud{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px auto 14px;max-width:1180px}.pill{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.12);padding:12px 18px;border-radius:14px;font-weight:900}.pill span{color:var(--yellow)}.main{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:1.05fr 1fr 1.05fr;gap:16px;background:rgba(67,56,202,.28);border:1px solid rgba(255,255,255,.07);padding:18px;border-radius:18px}.panel{background:var(--panel2);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:18px;min-height:310px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.02)}.panel h3{text-align:center;font-size:15px;margin-bottom:14px}.bank-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.charge{width:58px;height:58px;border-radius:999px;display:grid;place-items:center;font-weight:950;font-size:13px;color:#fff;box-shadow:0 12px 22px rgba(0,0,0,.28);touch-action:none;user-select:none;cursor:grab;justify-self:center;position:relative}.charge.positive{background:radial-gradient(circle at 35% 25%,#ff7878,#dc2626 68%)}.charge.negative{background:radial-gradient(circle at 35% 25%,#60a5fa,#2563eb 68%)}.charge:active{cursor:grabbing}.work-area{position:relative;height:250px;border:1.5px dashed rgba(255,255,255,.48);border-radius:14px;background:rgba(15,23,42,.32);overflow:hidden}.drop-hint{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:#cbd5e1;font-size:12px;pointer-events:none}.placed{position:absolute;z-index:3}.force-line{position:absolute;height:2px;background:linear-gradient(90deg,#93c5fd,#fef3c7);transform-origin:left center;z-index:1;opacity:.9}.distance-label{position:absolute;transform:translate(-50%,-50%);background:rgba(2,6,23,.78);border:1px solid rgba(255,255,255,.16);font-size:11px;padding:4px 8px;border-radius:999px;color:#fde68a;z-index:2}.arrow{position:absolute;width:44px;height:12px;z-index:2;opacity:.95}.arrow::before{content:"";position:absolute;left:0;top:5px;width:35px;height:3px;background:#fbbf24}.arrow::after{content:"";position:absolute;right:0;top:0;border-left:10px solid #fbbf24;border-top:6px solid transparent;border-bottom:6px solid transparent}.info-box{background:rgba(30,41,59,.62);border-radius:8px;padding:11px 12px;margin-bottom:9px;min-height:42px;color:#e2e8f0;font-size:13px}.info-box b{color:#fef08a}.formula{font-family:"JetBrains Mono",monospace;font-weight:900;color:#fff}.challenge{max-width:1180px;margin:16px auto 0;background:linear-gradient(130deg,rgba(14,116,144,.45),rgba(67,56,202,.55));border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:20px;text-align:center}.challenge h2{font-size:17px;margin-bottom:10px}.challenge p{color:#dbeafe;line-height:1.55}.challenge-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px auto;max-width:780px}.challenge-card{background:rgba(2,6,23,.35);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px;font-size:13px}.challenge-card b{display:block;color:#fde68a;margin-bottom:3px}.answer-row{display:flex;gap:10px;justify-content:center;align-items:center;margin-top:12px;flex-wrap:wrap}.answer-row input{width:min(260px,88vw);padding:13px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.18);background:rgba(15,23,42,.85);color:#fff;font-weight:800;outline:none}.answer-row input:focus{border-color:#facc15;box-shadow:0 0 0 4px rgba(250,204,21,.12)}.status{min-height:26px;margin-top:10px;font-weight:900}.progress{height:12px;width:min(360px,80vw);margin:12px auto 0;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden}.bar{height:100%;width:0;background:linear-gradient(90deg,#22c55e,#facc15);transition:.25s}.footer-actions{max-width:1180px;margin:14px auto 0;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}.modal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;place-items:center;z-index:20;padding:20px}.modal.open{display:grid}.modal-card{width:min(620px,96vw);background:linear-gradient(145deg,#0f172a,#312e81);border:1px solid rgba(255,255,255,.14);border-radius:24px;padding:24px;box-shadow:var(--shadow)}.modal-card h2{text-align:center;margin-bottom:12px}.teacher-area textarea{width:100%;min-height:220px;margin:10px 0;border-radius:14px;border:1px solid rgba(255,255,255,.15);padding:12px;background:#020617;color:#dbeafe;font-family:Consolas,monospace;font-size:12px}.result-table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}.result-table td{padding:8px;border-bottom:1px solid rgba(255,255,255,.1)}.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#0f172a;border:1px solid rgba(255,255,255,.15);padding:10px 14px;border-radius:999px;font-size:13px;display:none;z-index:30}.toast.show{display:block}.shake{animation:shake .25s linear 1}@keyframes shake{25%{transform:translateX(-4px)}50%{transform:translateX(4px)}75%{transform:translateX(-3px)}}
+    @media(max-width:900px){.screen{padding:14px 10px}.main{grid-template-columns:1fr}.panel{min-height:auto}.work-area{height:280px}.challenge-grid{grid-template-columns:repeat(2,1fr)}.hud{padding:0 4px}.bank-grid{grid-template-columns:repeat(4,1fr)}}
+  </style>
+</head>
+<body>
+  <canvas id="starCanvas"></canvas><div class="nebula"></div>
+
+  <section id="startScreen" class="start-wrap">
+    <div class="start-card">
+      <div class="brand">⚡ Game Hukum Coulomb ⚡</div>
+      <p class="subtitle">Tema luar angkasa dengan bintang bergerak. Masukkan identitas, lalu selesaikan 3 level × 3 tantangan untuk mencari nilai gaya Coulomb.</p>
+      <div class="form-grid">
+        <div class="field"><label>Nama Siswa</label><input id="studentName" placeholder="Contoh: Andi" autocomplete="off"></div>
+        <div class="field"><label>Kelas</label><input id="studentClass" placeholder="Contoh: IX A" autocomplete="off"></div>
+      </div>
+      <button class="btn-pink" onclick="startGame()">🚀 Mulai Game</button>
+      <button class="btn-ghost" onclick="openTeacherPanel()" style="margin-left:8px">⚙️ Atur Tantangan</button>
+      <p style="font-size:12px;color:#cbd5e1;margin-top:16px">Catatan guru: hasil bisa diekspor CSV atau dikirim ke Google Sheets lewat Apps Script.</p>
+    </div>
+  </section>
+
+  <section id="gameScreen" class="screen">
+    <div class="top"><h1>⚡ Game Hukum Coulomb ⚡</h1><p>Seret muatan listrik, baca data tantangan, lalu hitung nilai F.</p></div>
+    <div class="hud">
+      <div class="pill">Skor: <span id="scoreText">0</span></div>
+      <div class="pill">Level: <span id="levelText">1</span> | Tantangan: <span id="challengeText">1</span>/3</div>
+      <button class="btn-pink btn-small" onclick="newGame()">🎮 Game Baru</button>
+    </div>
+
+    <main class="main">
+      <section class="panel">
+        <h3>🔋 Bank Muatan</h3>
+        <div id="chargeBank" class="bank-grid"></div>
+        <button class="btn-ghost btn-small" style="width:100%;margin-top:14px" onclick="shuffleBank()">🔀 Acak Muatan</button>
+      </section>
+
+      <section class="panel">
+        <h3>⚡ Area Kerja</h3>
+        <div id="workArea" class="work-area" ondragover="event.preventDefault()" ondrop="dropCharge(event)">
+          <div class="drop-hint">Seret 2 muatan sesuai tantangan ke area ini</div>
+        </div>
+        <button class="btn-red btn-small" style="width:100%;margin-top:12px" onclick="clearWorkArea()">🗑️ Bersihkan</button>
+      </section>
+
+      <section class="panel">
+        <h3>📊 Informasi</h3>
+        <div class="info-box"><b>Rumus Hukum Coulomb</b><br><span class="formula">F = k × |q₁ × q₂| / r²</span></div>
+        <div class="info-box"><b>Konstanta</b><br>k = 9 × 10⁹ N·m²/C²</div>
+        <div class="info-box"><b>Jarak</b><br><span id="distanceInfo">-</span></div>
+        <div class="info-box"><b>Jenis Gaya</b><br><span id="forceInfo">-</span></div>
+        <div class="info-box"><b>Status Area</b><br><span id="areaInfo">Belum ada muatan</span></div>
+      </section>
+    </main>
+
+    <section class="challenge">
+      <h2 id="challengeTitle">🎯 Tantangan Level 1</h2>
+      <p id="instructionText">Tempatkan muatan sesuai instruksi, lalu hitung gaya Coulomb.</p>
+      <div class="challenge-grid">
+        <div class="challenge-card"><b>q₁</b><span id="q1Text">-</span></div>
+        <div class="challenge-card"><b>q₂</b><span id="q2Text">-</span></div>
+        <div class="challenge-card"><b>Jarak r</b><span id="rText">-</span></div>
+        <div class="challenge-card"><b>Satuan Jawaban</b>Newton (N)</div>
+      </div>
+      <div class="answer-row">
+        <input id="answerInput" type="number" step="0.001" inputmode="decimal" placeholder="Masukkan nilai F dalam Newton">
+        <button class="btn-green" onclick="checkAnswer()">✅ Cek Jawaban</button>
+      </div>
+      <div id="statusText" class="status"></div>
+      <div class="progress"><div id="progressBar" class="bar"></div></div>
+    </section>
+
+    <div class="footer-actions">
+      <button class="btn-ghost btn-small" onclick="toggleMusic()">🎵 Musik: <span id="musicState">ON</span></button>
+      <button class="btn-orange btn-small" onclick="exportCSV()">📥 Export Hasil CSV</button>
+      <button class="btn-ghost btn-small" onclick="openTeacherPanel()">⚙️ Atur Tantangan</button>
+    </div>
+  </section>
+
+  <div id="finishModal" class="modal"><div class="modal-card"><h2>🏆 Game Selesai</h2><div id="finishContent"></div><div style="text-align:center;margin-top:16px"><button class="btn-green" onclick="exportCSV()">📥 Export CSV</button> <button class="btn-pink" onclick="newGame()">Main Lagi</button></div></div></div>
+  <div id="teacherModal" class="modal"><div class="modal-card teacher-area"><h2>⚙️ Panel Guru: Atur Tantangan</h2><p style="color:#cbd5e1;font-size:13px;line-height:1.5">Ubah q1, q2 dalam µC dan r dalam meter. Nilai F otomatis dihitung oleh game. Format harus JSON.</p><textarea id="challengeEditor"></textarea><div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center"><button class="btn-green" onclick="saveChallengeJSON()">Simpan Tantangan</button><button class="btn-orange" onclick="resetChallengeJSON()">Reset Default</button><button class="btn-ghost" onclick="closeTeacherPanel()">Tutup</button></div></div></div>
+  <div id="toast" class="toast"></div>
+
+<script>
+// =====================================================
+// OPSI SPREADSHEET ONLINE
+// 1) Buat Google Sheet dari template XLSX yang disertakan.
+// 2) Paste kode google_apps_script_coulomb.txt ke Apps Script.
+// 3) Deploy sebagai Web App, lalu paste URL Web App di bawah ini.
+// Jika kosong, data tetap tersimpan lokal dan bisa diekspor CSV.
+// =====================================================
+const GOOGLE_SCRIPT_URL = "";
+
+const DEFAULT_CHALLENGES = [
+  {level:1, task:1, q1: 2, q2: 1, r:0.30, instruction:"Tempatkan dua muatan positif, lalu hitung nilai gaya tolak-menolak."},
+  {level:1, task:2, q1:-1, q2:-3, r:0.60, instruction:"Tempatkan dua muatan negatif, lalu hitung nilai gaya tolak-menolak."},
+  {level:1, task:3, q1: 3, q2:-2, r:0.30, instruction:"Tempatkan muatan berbeda tanda, lalu hitung nilai gaya tarik-menarik."},
+  {level:2, task:1, q1: 4, q2:-2, r:0.40, instruction:"Gunakan q₁ = +4 µC dan q₂ = -2 µC pada jarak 0,40 m. Hitung F."},
+  {level:2, task:2, q1:-5, q2: 2, r:0.50, instruction:"Tentukan gaya Coulomb pada dua muatan berbeda tanda dengan jarak 0,50 m."},
+  {level:2, task:3, q1: 6, q2: 3, r:0.60, instruction:"Dua muatan positif berjarak 0,60 m. Hitung gaya tolak-menolak."},
+  {level:3, task:1, q1: 5, q2:-6, r:0.45, instruction:"Level sulit: q besar dan jarak tidak bulat. Hitung F sampai 2 angka desimal."},
+  {level:3, task:2, q1:-4, q2:-6, r:0.35, instruction:"Dua muatan negatif berjarak 0,35 m. Hitung gaya tolak-menolak."},
+  {level:3, task:3, q1: 6, q2:-3, r:0.25, instruction:"Tantangan akhir: muatan berbeda tanda berjarak 0,25 m. Hitung gaya tarik-menarik."}
+];
+
+let challenges = loadChallenges();
+let currentIndex = 0, score = 0, attempts = 0, startTime = null;
+let placedCharges = [];
+let musicOn = true, audioCtx = null, musicTimer = null;
+let student = {name:"", kelas:""};
+
+function loadChallenges(){
+  try{ const saved = localStorage.getItem('coulomb_challenges'); return saved ? JSON.parse(saved) : structuredClone(DEFAULT_CHALLENGES); }
+  catch(e){ return structuredClone(DEFAULT_CHALLENGES); }
+}
+function coulombForce(q1uC, q2uC, r){ return 0.009 * Math.abs(q1uC*q2uC) / (r*r); }
+function forceType(q1,q2){ return (q1*q2>0) ? 'Tolak-menolak' : 'Tarik-menarik'; }
+function fmt(n, d=3){ return Number(n).toLocaleString('id-ID',{maximumFractionDigits:d}); }
+function getCurrent(){ return challenges[currentIndex]; }
+
+function startGame(){
+  const name = document.getElementById('studentName').value.trim();
+  const kelas = document.getElementById('studentClass').value.trim();
+  if(!name || !kelas){ showToast('Nama dan kelas wajib diisi.'); return; }
+  student = {name, kelas}; score=0; attempts=0; currentIndex=0; startTime = Date.now();
+  document.getElementById('startScreen').style.display='none';
+  document.getElementById('gameScreen').classList.add('active');
+  initAudio(); renderBank(); loadChallenge(); playMusic();
+}
+function newGame(){ location.reload(); }
+
+function renderBank(){
+  const vals = [-6,-5,-4,-3,-2,-1,1,2,3,4,5,6];
+  const bank = document.getElementById('chargeBank'); bank.innerHTML='';
+  vals.forEach(v=>{
+    const el = document.createElement('div');
+    el.className = 'charge ' + (v>0?'positive':'negative');
+    el.draggable = true; el.dataset.value = v; el.textContent = (v>0?'+':'') + v + 'µC';
+    el.addEventListener('dragstart', e=> e.dataTransfer.setData('text/plain', String(v)));
+    el.addEventListener('touchstart', touchStart, {passive:false});
+    bank.appendChild(el);
+  });
+}
+function shuffleBank(){ const bank=document.getElementById('chargeBank'); [...bank.children].sort(()=>Math.random()-.5).forEach(x=>bank.appendChild(x)); }
+
+let touchClone = null;
+function touchStart(e){
+  e.preventDefault(); const src=e.currentTarget; const touch=e.touches[0];
+  touchClone=src.cloneNode(true); touchClone.style.position='fixed'; touchClone.style.left=(touch.clientX-29)+'px'; touchClone.style.top=(touch.clientY-29)+'px'; touchClone.style.zIndex=99; touchClone.dataset.value=src.dataset.value; document.body.appendChild(touchClone);
+  document.addEventListener('touchmove', touchMove, {passive:false}); document.addEventListener('touchend', touchEnd, {once:true});
+}
+function touchMove(e){ e.preventDefault(); if(!touchClone) return; const t=e.touches[0]; touchClone.style.left=(t.clientX-29)+'px'; touchClone.style.top=(t.clientY-29)+'px'; }
+function touchEnd(e){
+  if(!touchClone) return; const t=e.changedTouches[0]; const area=document.getElementById('workArea'); const rect=area.getBoundingClientRect();
+  if(t.clientX>=rect.left && t.clientX<=rect.right && t.clientY>=rect.top && t.clientY<=rect.bottom){ addCharge(Number(touchClone.dataset.value), t.clientX-rect.left-29, t.clientY-rect.top-29); }
+  touchClone.remove(); touchClone=null; document.removeEventListener('touchmove', touchMove);
+}
+function dropCharge(e){
+  e.preventDefault(); const val = Number(e.dataTransfer.getData('text/plain')); const rect=e.currentTarget.getBoundingClientRect();
+  addCharge(val, e.clientX-rect.left-29, e.clientY-rect.top-29);
+}
+function addCharge(value, x, y){
+  if(placedCharges.length>=2){ showToast('Maksimal 2 muatan. Bersihkan area jika ingin mengganti.'); return; }
+  const area=document.getElementById('workArea');
+  const el=document.createElement('div'); el.className='charge placed '+(value>0?'positive':'negative'); el.dataset.value=value; el.textContent=(value>0?'+':'')+value+'µC';
+  el.style.left=Math.max(6, Math.min(x, area.clientWidth-64))+'px'; el.style.top=Math.max(6, Math.min(y, area.clientHeight-64))+'px';
+  area.appendChild(el); placedCharges.push({value, el}); updateAreaInfo(); drawForceVisual();
+}
+function clearWorkArea(){
+  document.querySelectorAll('#workArea .placed,#workArea .force-line,#workArea .distance-label,#workArea .arrow').forEach(el=>el.remove());
+  placedCharges=[]; updateAreaInfo();
+}
+function updateAreaInfo(){
+  const areaInfo=document.getElementById('areaInfo');
+  if(placedCharges.length===0) areaInfo.textContent='Belum ada muatan';
+  else areaInfo.textContent=placedCharges.map(c=>(c.value>0?'+':'')+c.value+'µC').join(' dan ');
+}
+function drawForceVisual(){
+  document.querySelectorAll('#workArea .force-line,#workArea .distance-label,#workArea .arrow').forEach(el=>el.remove());
+  if(placedCharges.length!==2) return;
+  const area=document.getElementById('workArea'), c1=placedCharges[0], c2=placedCharges[1], ch=getCurrent();
+  const x1=c1.el.offsetLeft+29, y1=c1.el.offsetTop+29, x2=c2.el.offsetLeft+29, y2=c2.el.offsetTop+29;
+  const dx=x2-x1, dy=y2-y1, len=Math.hypot(dx,dy), angle=Math.atan2(dy,dx)*180/Math.PI;
+  const line=document.createElement('div'); line.className='force-line'; line.style.left=x1+'px'; line.style.top=y1+'px'; line.style.width=len+'px'; line.style.transform=`rotate(${angle}deg)`; area.appendChild(line);
+  const lab=document.createElement('div'); lab.className='distance-label'; lab.textContent='r = '+fmt(ch.r,2)+' m'; lab.style.left=((x1+x2)/2)+'px'; lab.style.top=((y1+y2)/2)+'px'; area.appendChild(lab);
+  const repel = c1.value*c2.value>0;
+  addArrow(x1, y1, repel ? angle+180 : angle); addArrow(x2, y2, repel ? angle : angle+180);
+}
+function addArrow(x,y,deg){ const area=document.getElementById('workArea'); const a=document.createElement('div'); a.className='arrow'; a.style.left=(x-22)+'px'; a.style.top=(y-6)+'px'; a.style.transform=`rotate(${deg}deg)`; area.appendChild(a); }
+
+function loadChallenge(){
+  clearWorkArea(); const ch=getCurrent(); const f=coulombForce(ch.q1,ch.q2,ch.r); const pct=(currentIndex/(challenges.length))*100;
+  document.getElementById('scoreText').textContent=score; document.getElementById('levelText').textContent=ch.level; document.getElementById('challengeText').textContent=ch.task;
+  document.getElementById('challengeTitle').textContent='🎯 Tantangan Level '+ch.level;
+  document.getElementById('instructionText').textContent=ch.instruction;
+  document.getElementById('q1Text').textContent=(ch.q1>0?'+':'')+ch.q1+' µC'; document.getElementById('q2Text').textContent=(ch.q2>0?'+':'')+ch.q2+' µC'; document.getElementById('rText').textContent=fmt(ch.r,2)+' m';
+  document.getElementById('distanceInfo').textContent='r = '+fmt(ch.r,2)+' m'; document.getElementById('forceInfo').textContent=forceType(ch.q1,ch.q2);
+  document.getElementById('answerInput').value=''; document.getElementById('statusText').textContent=''; document.getElementById('progressBar').style.width=pct+'%';
+}
+function placedMatchesChallenge(){
+  if(placedCharges.length !== 2) return false;
+  const needed = [getCurrent().q1, getCurrent().q2].sort((a,b)=>a-b).join(',');
+  const got = placedCharges.map(c=>c.value).sort((a,b)=>a-b).join(',');
+  return needed === got;
+}
+function checkAnswer(){
+  const input=document.getElementById('answerInput'); const ans=Number(input.value.replace(',','.')); const status=document.getElementById('statusText'); const ch=getCurrent(); const correct=coulombForce(ch.q1,ch.q2,ch.r);
+  if(!placedMatchesChallenge()){ status.textContent='⚠️ Muatan di area kerja belum sesuai dengan q₁ dan q₂ tantangan.'; status.style.color='#fde68a'; playWrong(); shakeWork(); return; }
+  if(!Number.isFinite(ans)){ status.textContent='Masukkan jawaban angka dalam satuan Newton.'; status.style.color='#fde68a'; return; }
+  attempts++;
+  const tolerance = Math.max(0.01, Math.abs(correct)*0.05); // toleransi 5% atau minimal 0,01 N
+  const ok = Math.abs(ans-correct) <= tolerance;
+  recordAttempt(ok, ans, correct);
+  if(ok){
+    score += 10; document.getElementById('scoreText').textContent=score; status.textContent='✅ Benar! F ≈ '+fmt(correct,3)+' N. Skor +10.'; status.style.color='#86efac'; playCorrect();
+    setTimeout(nextChallenge, 850);
+  }else{
+    status.textContent='❌ Belum tepat. Cek konversi µC ke C dan pangkat dua jarak. Toleransi ±5%.'; status.style.color='#fecaca'; playWrong(); shakeWork();
+  }
+}
+function nextChallenge(){ currentIndex++; if(currentIndex>=challenges.length){ finishGame(); } else { loadChallenge(); } }
+function finishGame(){
+  stopMusic(); document.getElementById('progressBar').style.width='100%';
+  const dur=Math.round((Date.now()-startTime)/1000); const acc=attempts ? Math.round((score/10)/attempts*100) : 0;
+  document.getElementById('finishContent').innerHTML = `<table class="result-table"><tr><td>Nama</td><td><b>${student.name}</b></td></tr><tr><td>Kelas</td><td>${student.kelas}</td></tr><tr><td>Skor Akhir</td><td><b>${score}/90</b></td></tr><tr><td>Jumlah Percobaan</td><td>${attempts}</td></tr><tr><td>Akurasi</td><td>${acc}%</td></tr><tr><td>Durasi</td><td>${dur} detik</td></tr></table>`;
+  document.getElementById('finishModal').classList.add('open');
+}
+function recordAttempt(ok, answer, correct){
+  const ch=getCurrent(); const row={
+    timestamp:new Date().toISOString(), nama:student.name, kelas:student.kelas, level:ch.level, tantangan:ch.task,
+    q1_uC:ch.q1, q2_uC:ch.q2, r_m:ch.r, f_benar_N:Number(correct.toFixed(5)), jawaban_siswa_N:answer,
+    status:ok?'Benar':'Salah', skor_saat_ini:score + (ok?10:0), durasi_detik:Math.round((Date.now()-startTime)/1000), jenis_gaya:forceType(ch.q1,ch.q2)
+  };
+  const rows=JSON.parse(localStorage.getItem('coulomb_results')||'[]'); rows.push(row); localStorage.setItem('coulomb_results',JSON.stringify(rows)); sendToSheet(row);
+}
+async function sendToSheet(row){
+  if(!GOOGLE_SCRIPT_URL) return;
+  try{ await fetch(GOOGLE_SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(row)}); }
+  catch(e){ console.warn('Gagal kirim ke spreadsheet:', e); }
+}
+function exportCSV(){
+  const rows=JSON.parse(localStorage.getItem('coulomb_results')||'[]'); if(rows.length===0){showToast('Belum ada data hasil.');return;}
+  const headers=Object.keys(rows[0]); const csv=[headers.join(',')].concat(rows.map(r=>headers.map(h=>'"'+String(r[h]??'').replaceAll('"','""')+'"').join(','))).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='hasil_game_coulomb.csv'; a.click(); URL.revokeObjectURL(a.href);
+}
+function openTeacherPanel(){ document.getElementById('challengeEditor').value=JSON.stringify(challenges,null,2); document.getElementById('teacherModal').classList.add('open'); }
+function closeTeacherPanel(){ document.getElementById('teacherModal').classList.remove('open'); }
+function saveChallengeJSON(){
+  try{ const data=JSON.parse(document.getElementById('challengeEditor').value); if(!Array.isArray(data)||data.length!==9) throw new Error('Harus 9 tantangan'); data.forEach((x,i)=>{ if(!x.level||!x.task||!Number.isFinite(Number(x.q1))||!Number.isFinite(Number(x.q2))||!Number.isFinite(Number(x.r))) throw new Error('Data tidak lengkap di baris '+(i+1)); }); localStorage.setItem('coulomb_challenges',JSON.stringify(data)); challenges=data; closeTeacherPanel(); showToast('Tantangan berhasil disimpan.'); if(document.getElementById('gameScreen').classList.contains('active')) loadChallenge(); }
+  catch(e){ showToast('JSON salah: '+e.message); }
+}
+function resetChallengeJSON(){ localStorage.removeItem('coulomb_challenges'); challenges=structuredClone(DEFAULT_CHALLENGES); document.getElementById('challengeEditor').value=JSON.stringify(challenges,null,2); showToast('Tantangan kembali ke default.'); }
+function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2600); }
+function shakeWork(){ const w=document.getElementById('workArea'); w.classList.add('shake'); setTimeout(()=>w.classList.remove('shake'),300); }
+
+// Audio tanpa file eksternal, aman untuk browser offline.
+function initAudio(){ if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }
+function beep(freq=440, duration=.16, type='sine', gain=.05){ if(!audioCtx) return; const osc=audioCtx.createOscillator(), g=audioCtx.createGain(); osc.type=type; osc.frequency.value=freq; g.gain.value=gain; osc.connect(g); g.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime+duration); }
+function playCorrect(){ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,.12,'triangle',.06),i*90)); }
+function playWrong(){ [220,165].forEach((f,i)=>setTimeout(()=>beep(f,.18,'sawtooth',.035),i*120)); }
+function playMusic(){ if(!musicOn||!audioCtx) return; stopMusic(); const notes=[262,330,392,523,392,330,294,349,440,587,440,349]; let i=0; musicTimer=setInterval(()=>{ if(musicOn) beep(notes[i++%notes.length],.10,'square',.012); },180); }
+function stopMusic(){ if(musicTimer){clearInterval(musicTimer); musicTimer=null;} }
+function toggleMusic(){ musicOn=!musicOn; document.getElementById('musicState').textContent=musicOn?'ON':'OFF'; if(musicOn){initAudio();playMusic();}else stopMusic(); }
+
+// Canvas bintang bergerak.
+const canvas=document.getElementById('starCanvas'), ctx=canvas.getContext('2d'); let stars=[];
+function resizeStars(){ canvas.width=innerWidth; canvas.height=innerHeight; const n=Math.floor((innerWidth*innerHeight)/5200); stars=Array.from({length:n},()=>({x:Math.random()*canvas.width,y:Math.random()*canvas.height,z:Math.random()*1.8+.3,s:Math.random()*1.5+.4})); }
+function animateStars(){ ctx.clearRect(0,0,canvas.width,canvas.height); stars.forEach(st=>{ st.y+=st.z*.28; st.x+=st.z*.08; if(st.y>canvas.height){st.y=0;st.x=Math.random()*canvas.width} if(st.x>canvas.width) st.x=0; ctx.globalAlpha=.45+st.z/2.5; ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(st.x,st.y,st.s,0,Math.PI*2); ctx.fill(); }); requestAnimationFrame(animateStars); }
+addEventListener('resize',resizeStars); resizeStars(); animateStars();
+</script>
+</body>
+</html>
