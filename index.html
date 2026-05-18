@@ -110,7 +110,7 @@
 // 3) Deploy sebagai Web App, lalu paste URL Web App di bawah ini.
 // Jika kosong, data tetap tersimpan lokal dan bisa diekspor CSV.
 // =====================================================
-const GOOGLE_SCRIPT_URL = "";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwVpHuDOSbQavK6RSBOXxBRYvQ3Czk6DN9Q0NS8u80mb0r0s-r7eAnPI1jeZ37lAENJ/exec";
 
 const DEFAULT_CHALLENGES = [
   {level:1, task:1, q1: 2, q2: 1, r:0.30, instruction:"Tempatkan dua muatan positif, lalu hitung nilai gaya tolak-menolak."},
@@ -129,6 +129,7 @@ let currentIndex = 0, score = 0, attempts = 0, startTime = null;
 let placedCharges = [];
 let musicOn = true, audioCtx = null, musicTimer = null;
 let student = {name:"", kelas:""};
+const SESSION_ID = Date.now() + '-' + Math.random().toString(36).slice(2);
 
 function loadChallenges(){
   try{ const saved = localStorage.getItem('coulomb_challenges'); return saved ? JSON.parse(saved) : structuredClone(DEFAULT_CHALLENGES); }
@@ -144,6 +145,7 @@ function startGame(){
   const kelas = document.getElementById('studentClass').value.trim();
   if(!name || !kelas){ showToast('Nama dan kelas wajib diisi.'); return; }
   student = {name, kelas}; score=0; attempts=0; currentIndex=0; startTime = Date.now();
+  recordStartRealtime();
   document.getElementById('startScreen').style.display='none';
   document.getElementById('gameScreen').classList.add('active');
   initAudio(); renderBank(); loadChallenge(); playMusic();
@@ -248,16 +250,64 @@ function finishGame(){
 }
 function recordAttempt(ok, answer, correct){
   const ch=getCurrent(); const row={
-    timestamp:new Date().toISOString(), nama:student.name, kelas:student.kelas, level:ch.level, tantangan:ch.task,
+    tipe_event:'Jawaban', session_id:SESSION_ID, timestamp:new Date().toISOString(), nama:student.name, kelas:student.kelas, level:ch.level, tantangan:ch.task,
     q1_uC:ch.q1, q2_uC:ch.q2, r_m:ch.r, f_benar_N:Number(correct.toFixed(5)), jawaban_siswa_N:answer,
     status:ok?'Benar':'Salah', skor_saat_ini:score + (ok?10:0), durasi_detik:Math.round((Date.now()-startTime)/1000), jenis_gaya:forceType(ch.q1,ch.q2)
   };
   const rows=JSON.parse(localStorage.getItem('coulomb_results')||'[]'); rows.push(row); localStorage.setItem('coulomb_results',JSON.stringify(rows)); sendToSheet(row);
 }
-async function sendToSheet(row){
+function recordStartRealtime(){
+  const row={
+    tipe_event:'Mulai Game', session_id:SESSION_ID, timestamp:new Date().toISOString(),
+    nama:student.name, kelas:student.kelas, level:'', tantangan:'',
+    q1_uC:'', q2_uC:'', r_m:'', f_benar_N:'', jawaban_siswa_N:'',
+    status:'Mulai', skor_saat_ini:0, durasi_detik:0, jenis_gaya:''
+  };
+  const rows=JSON.parse(localStorage.getItem('coulomb_results')||'[]');
+  rows.push(row);
+  localStorage.setItem('coulomb_results',JSON.stringify(rows));
+  sendToSheet(row);
+}
+
+function sendToSheet(row){
   if(!GOOGLE_SCRIPT_URL) return;
-  try{ await fetch(GOOGLE_SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(row)}); }
-  catch(e){ console.warn('Gagal kirim ke spreadsheet:', e); }
+
+  // Metode paling stabil untuk file index.html lokal / GitHub Pages:
+  // kirim POST ke Apps Script melalui form tersembunyi + iframe.
+  // Cara ini menghindari masalah CORS dan lebih pasti dibanding Image Beacon.
+  try{
+    const iframeName = 'sheet_iframe_' + Date.now();
+    const iframe = document.createElement('iframe');
+    iframe.name = iframeName;
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = GOOGLE_SCRIPT_URL;
+    form.target = iframeName;
+    form.style.display = 'none';
+
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'payload';
+    input.value = JSON.stringify(row);
+
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+
+    console.log('Data dikirim ke Spreadsheet:', row);
+    showToast('Identitas/rekapan sedang dikirim ke Spreadsheet.');
+
+    setTimeout(()=>{
+      form.remove();
+      iframe.remove();
+    }, 5000);
+  }catch(e){
+    console.warn('Gagal kirim ke spreadsheet:', e);
+    showToast('Gagal mengirim ke Spreadsheet. Cek Web App URL.');
+  }
 }
 function exportCSV(){
   const rows=JSON.parse(localStorage.getItem('coulomb_results')||'[]'); if(rows.length===0){showToast('Belum ada data hasil.');return;}
