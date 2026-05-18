@@ -106,9 +106,9 @@
 // =====================================================
 // OPSI SPREADSHEET ONLINE
 // 1) Buat Google Sheet dari template XLSX yang disertakan.
-// 2) Paste kode google_apps_script_coulomb.txt ke Apps Script.
-// 3) Deploy sebagai Web App, lalu paste URL Web App di bawah ini.
-// Jika kosong, data tetap tersimpan lokal dan bisa diekspor CSV.
+// 2) Paste Web Script final ke Apps Script.
+// 3) Deploy sebagai Web App.
+// URL Web App sudah diisi di bawah ini.
 // =====================================================
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwVpHuDOSbQavK6RSBOXxBRYvQ3Czk6DN9Q0NS8u80mb0r0s-r7eAnPI1jeZ37lAENJ/exec";
 
@@ -250,7 +250,7 @@ function finishGame(){
 }
 function recordAttempt(ok, answer, correct){
   const ch=getCurrent(); const row={
-    tipe_event:'Jawaban', session_id:SESSION_ID, timestamp:new Date().toISOString(), nama:student.name, kelas:student.kelas, level:ch.level, tantangan:ch.task,
+    tipe_event:'Jawaban', event_id:makeEventId('jawaban'), session_id:SESSION_ID, timestamp:new Date().toISOString(), nama:student.name, kelas:student.kelas, level:ch.level, tantangan:ch.task,
     q1_uC:ch.q1, q2_uC:ch.q2, r_m:ch.r, f_benar_N:Number(correct.toFixed(5)), jawaban_siswa_N:answer,
     status:ok?'Benar':'Salah', skor_saat_ini:score + (ok?10:0), durasi_detik:Math.round((Date.now()-startTime)/1000), jenis_gaya:forceType(ch.q1,ch.q2)
   };
@@ -258,7 +258,7 @@ function recordAttempt(ok, answer, correct){
 }
 function recordStartRealtime(){
   const row={
-    tipe_event:'Mulai Game', session_id:SESSION_ID, timestamp:new Date().toISOString(),
+    tipe_event:'Mulai Game', event_id:makeEventId('mulai'), session_id:SESSION_ID, timestamp:new Date().toISOString(),
     nama:student.name, kelas:student.kelas, level:'', tantangan:'',
     q1_uC:'', q2_uC:'', r_m:'', f_benar_N:'', jawaban_siswa_N:'',
     status:'Mulai', skor_saat_ini:0, durasi_detik:0, jenis_gaya:''
@@ -269,45 +269,43 @@ function recordStartRealtime(){
   sendToSheet(row);
 }
 
+function makeEventId(label){
+  return SESSION_ID + '-' + label + '-' + Date.now() + '-' + Math.random().toString(36).slice(2,8);
+}
+
 function sendToSheet(row){
   if(!GOOGLE_SCRIPT_URL) return;
 
-  // Metode paling stabil untuk file index.html lokal / GitHub Pages:
-  // kirim POST ke Apps Script melalui form tersembunyi + iframe.
-  // Cara ini menghindari masalah CORS dan lebih pasti dibanding Image Beacon.
-  try{
-    const iframeName = 'sheet_iframe_' + Date.now();
-    const iframe = document.createElement('iframe');
-    iframe.name = iframeName;
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
-
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = GOOGLE_SCRIPT_URL;
-    form.target = iframeName;
-    form.style.display = 'none';
-
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = 'payload';
-    input.value = JSON.stringify(row);
-
-    form.appendChild(input);
-    document.body.appendChild(form);
-    form.submit();
-
-    console.log('Data dikirim ke Spreadsheet:', row);
-    showToast('Identitas/rekapan sedang dikirim ke Spreadsheet.');
-
-    setTimeout(()=>{
-      form.remove();
-      iframe.remove();
-    }, 5000);
-  }catch(e){
-    console.warn('Gagal kirim ke spreadsheet:', e);
-    showToast('Gagal mengirim ke Spreadsheet. Cek Web App URL.');
+  // WAJIB ada EVENT_ID agar tidak dobel kalau POST dan GET sama-sama terkirim.
+  if(!row.event_id){
+    row.event_id = makeEventId(row.tipe_event || 'data');
   }
+
+  // Cara 1: POST form-urlencoded. Cocok untuk index.html lokal dan GitHub Pages.
+  try{
+    const formData = new URLSearchParams();
+    formData.append('payload', JSON.stringify(row));
+
+    fetch(GOOGLE_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      body: formData
+    });
+  }catch(e){
+    console.warn('POST ke Spreadsheet gagal:', e);
+  }
+
+  // Cara 2: GET beacon sebagai cadangan. Apps Script akan menolak data dobel dengan EVENT_ID.
+  try{
+    const payload = encodeURIComponent(JSON.stringify(row));
+    const img = new Image();
+    img.src = GOOGLE_SCRIPT_URL + '?payload=' + payload + '&cacheBust=' + Date.now();
+  }catch(e){
+    console.warn('GET beacon ke Spreadsheet gagal:', e);
+  }
+
+  console.log('Data dikirim ke Spreadsheet:', row);
+  showToast('Data sedang dikirim ke Spreadsheet.');
 }
 function exportCSV(){
   const rows=JSON.parse(localStorage.getItem('coulomb_results')||'[]'); if(rows.length===0){showToast('Belum ada data hasil.');return;}
