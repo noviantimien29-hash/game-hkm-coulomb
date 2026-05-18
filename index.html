@@ -274,28 +274,48 @@ function makeEventId(label){
 }
 
 function sendToSheet(row){
-  if(!GOOGLE_SCRIPT_URL) return;
+  if(!GOOGLE_SCRIPT_URL){
+    showToast('Web App URL belum diisi.');
+    return;
+  }
 
-  // WAJIB ada EVENT_ID agar tidak dobel kalau POST dan GET sama-sama terkirim.
+  // Pastikan EVENT_ID ada agar Apps Script bisa mencegah data dobel.
   if(!row.event_id){
     row.event_id = makeEventId(row.tipe_event || 'data');
   }
 
-  // Cara 1: POST form-urlencoded. Cocok untuk index.html lokal dan GitHub Pages.
+  // Metode utama untuk GitHub Pages:
+  // Form tersembunyi + iframe. Ini lebih stabil daripada fetch no-cors.
   try{
-    const formData = new URLSearchParams();
-    formData.append('payload', JSON.stringify(row));
+    const iframeName = 'sheetFrame_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+    const iframe = document.createElement('iframe');
+    iframe.name = iframeName;
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
 
-    fetch(GOOGLE_SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      body: formData
-    });
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = GOOGLE_SCRIPT_URL;
+    form.target = iframeName;
+    form.style.display = 'none';
+
+    const payloadInput = document.createElement('input');
+    payloadInput.type = 'hidden';
+    payloadInput.name = 'payload';
+    payloadInput.value = JSON.stringify(row);
+
+    form.appendChild(payloadInput);
+    document.body.appendChild(form);
+    form.submit();
+
+    setTimeout(function(){
+      try{ form.remove(); iframe.remove(); }catch(e){}
+    }, 8000);
   }catch(e){
-    console.warn('POST ke Spreadsheet gagal:', e);
+    console.warn('POST form ke Spreadsheet gagal:', e);
   }
 
-  // Cara 2: GET beacon sebagai cadangan. Apps Script akan menolak data dobel dengan EVENT_ID.
+  // Cadangan: GET beacon. Apps Script akan menolak data dobel berdasarkan EVENT_ID.
   try{
     const payload = encodeURIComponent(JSON.stringify(row));
     const img = new Image();
